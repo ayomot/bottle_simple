@@ -2,23 +2,55 @@
 # -*- coding: UTF-8 -*-
 
 import bottle
-from bottle import run, template, request, response, redirect
+from bottle import run, template, request, response, redirect, html_escape
 from bottle import route, get, post ,static_file, HTTPError, TEMPLATE_PATH
+import random
+import string
 import os
-TEMPLATE_PATH.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "views")))
+import sqlite3
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CSS_DIR = os.path.join(BASE_DIR, 'htdocs/css')
 JS_DIR = os.path.join(BASE_DIR, 'htdocs/js')
+UPLOADS_DIR = os.path.join(BASE_DIR, 'htdocs/uploads')
 
 @get('/')
 def index():
-    return template('index')
+    db = sqlite3.connect('db/post.db')
+    conn = db.cursor()
+    conn.execute("SELECT * FROM posts ORDER BY id DESC")
+    posts = conn.fetchall()
+    for row in posts:
+        print(row)
+    return template('index', posts = posts)
 
 @post('/')
 def post_data():
-    return request.forms.get("ex_text")
+    ex_text = request.forms.get("ex_text")
+    upload  = request.files.get('file')
+    if not upload:
+        return '画像は必須です'
+    name, ext = os.path.splitext(upload.filename)
 
+    if ext not in ('.png', '.jpg', '.jpeg'):
+        return '投稿できる画像形式はjpgとpngだけです'
+
+    st = string.digits + string.ascii_letters
+    file_name = ''.join(random.choice(st) for i in range(16)) + ext
+    save_path = os.path.join(UPLOADS_DIR, file_name)
+    upload.save(save_path, True)
+
+    db = sqlite3.connect('db/post.db')
+    conn = db.cursor()
+    conn.execute("INSERT INTO posts (text, img_file_name) VALUES (?, ?)",
+            (ex_text, file_name))
+    db.commit()
+    redirect('/')
+
+def nl2br(s):
+    """改行文字をbrタグに変換する
+    """
+    return html_escape(s).replace('\n','<br />')
 
 @get('/example')
 def example():
@@ -31,6 +63,9 @@ def recoad_static(filename):
 @route('/js/<filename>')
 def recoad_static(filename):
     return static_file(filename, root=JS_DIR)
+@route('/uploads/<filename>')
+def recoad_static(filename):
+    return static_file(filename, root=UPLOADS_DIR)
 
 if __name__ == '__main__':
     run(host='localhost', post=8080, debug=True, reloader=True)
