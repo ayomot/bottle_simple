@@ -27,10 +27,14 @@
 	{{!nl2br(post[1])}}
 </div>
 <div class="post-image">
-<img src="/uploads/{{post[2]}}" alt="{{post[2]}}" class="ex-image">
+	<div class="tools">
+		<span class="add-star" data-post-id="{{post[0]}}">{{post[3]}}</span>
+	</div>
+	<img src="/uploads/{{post[2]}}" alt="{{post[2]}}" class="ex-image">
 </div>
 %end
 </div>
+<script src="/js/jquery.js"></script>
 <script src="/js/main.js"></script>
 </body>
 </html>

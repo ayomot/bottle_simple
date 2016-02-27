@@ -3,7 +3,7 @@
 
 import bottle
 from bottle import run, template, request, response, redirect, html_escape
-from bottle import route, get, post ,static_file, HTTPError, TEMPLATE_PATH
+from bottle import route, get, post, static_file, TEMPLATE_PATH
 import random
 import string
 import os
@@ -20,8 +20,6 @@ def index():
     conn = db.cursor()
     conn.execute("SELECT * FROM posts ORDER BY id DESC")
     posts = conn.fetchall()
-    for row in posts:
-        print(row)
     return template('index', posts = posts)
 
 @post('/')
@@ -46,6 +44,20 @@ def post_data():
             (ex_text, file_name))
     db.commit()
     redirect('/')
+
+@get('/star/<post_id:int>')
+def star(post_id):
+    db = sqlite3.connect('db/post.db')
+    conn = db.cursor()
+    conn.execute("SELECT star_count FROM posts WHERE id = ?", (post_id,))
+    post = conn.fetchall()
+    if not post:
+        return "error"
+    new_star_count = post[0][0] + 1
+    conn.execute("UPDATE posts SET star_count = ? WHERE id = ?", (new_star_count, post_id))
+    db.commit()
+    response.content_type = 'application/json'
+    return {'star_count' : new_star_count}
 
 def nl2br(s):
     """改行文字をbrタグに変換する
